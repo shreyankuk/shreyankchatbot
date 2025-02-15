@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shreyank AI Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1e1e2e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .messages {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 12px;
+            max-width: 75%;
+            line-height: 1.4;
+        }
+
+        .user {
+            align-self: flex-end;
+            background-color: #007aff;
+            color: white;
+        }
+
+        .bot {
+            align-self: flex-start;
+            background-color: #444;
+        }
+
+        .input-container {
+            display: flex;
+            padding: 10px;
+            background: #292a36;
+            border-top: 1px solid #444;
+        }
+
+        input {
+            flex-grow: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            background: #333;
+            color: white;
+        }
+
+        button {
+            margin-left: 10px;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background-color: #007aff;
+            color: white;
+            cursor: pointer;
+        }
+
+        .model-btn {
+            background-color: #3498db;
+            margin: 5px;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            color: white;
+        }
+
+        .typing {
+            font-style: italic;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <h1>Shreyank AI Chatbot</h1>
+
+        <!-- Model Selection Buttons -->
+        <div>
+            <button class="model-btn" onclick="setModel('mistral')">Mistral</button>
+            <button class="model-btn" onclick="setModel('deepseek')">Deepseek</button>
+            <button class="model-btn" onclick="setModel('qwen')">Qwen</button>
+        </div>
+
+        <p>Selected Model: <span id="selected-model">{{ selected_model }}</span></p>
+
+        <div class="messages" id="chat-box">
+            {% for message in conversation_history %}
+                <div class="message {% if message.role == 'user' %}user{% else %}bot{% endif %}">
+                    {{ message.content }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="input-container">
+            <input type="text" id="userInput" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+            <button onclick="clearChat()">Clear</button>
+        </div>
+    </div>
+
+    <script>
+        function sendMessage() {
+            let inputField = document.getElementById("userInput");
+            let message = inputField.value.trim();
+            if (message === "") return;
+
+            let chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML += `<div class="message user">${message}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            inputField.value = "";
+
+            let typingIndicator = document.createElement("div");
+            typingIndicator.classList.add("message", "bot", "typing");
+            typingIndicator.innerText = "Typing...";
+            chatBox.appendChild(typingIndicator);
+
+            fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatBox.removeChild(typingIndicator);
+                chatBox.innerHTML += `<div class="message bot">${data.bot}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        }
+
+        function setModel(model) {
+            fetch(`/set_model/${model}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    document.getElementById("selected-model").innerText = data.selected_model;
+                }
+            });
+        }
+
+        function clearChat() {
+            fetch("/clear", { method: "POST" })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    location.reload();
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>
